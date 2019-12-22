@@ -66,3 +66,135 @@ SELECT prod_id, prod_price, prod_name FROM products ORDER BY prod_price DESC;
 SELECT prod_id, prod_price, prod_name FROM products ORDER BY prod_price DESC, prod_name;
 ```
 
+## 过滤数据
+
+过滤数据使用where子句，where后面跟上搜索条件，条件为真会输出。
+
+```mysql
+SELECT prod_name, prod_price
+FROM products
+WHERE prod_price = 3.49;
+
+SELECT prod_name, prod_price
+FROM products
+WHERE prod_price < 10;
+
+-- 搜索字符串时需要加上单引号，数值则不需要加，此外<>一般可以替换!=，但有的系统不行。
+SELECT vend_id, prod_name
+FROM Products
+WHERE vend_id <> 'DLL01'; 
+
+SELECT prod_name, prod_price
+FROM Products
+WHERE prod_price BETWEEN 5 AND 10;
+```
+
+除了上面的示例，where子句还支持下面的操作符。
+
+<img src="assets/image-20191222123236713.png" alt="image-20191222123236713" style="zoom: 67%;" />
+
+## 高级数据过滤
+
+上面一节中where的搜索条件时单个，这一节是组合多个操作符。
+
+```mysql
+-- 与运算
+SELECT prod_id, prod_price, prod_name
+FROM products
+WHERE vend_id = 'DLL01' AND prod_price <= 4;
+
+-- 或运算
+SELECT prod_name, prod_price
+FROM Products
+WHERE vend_id = 'DLL01' OR vend_id = 'BRS01';
+
+-- 注：与运算的优先级要高于或运算，会导致意外输出
+SELECT prod_name, prod_price
+FROM Products
+WHERE vend_id = 'DLL01' OR vend_id = 'BRS01'
+AND prod_price >= 10;
+
+-- 若需先进行或运算，需要将或运算括起来，然后进行与运算
+SELECT prod_name, prod_price
+FROM Products
+WHERE (vend_id = 'DLL01' OR vend_id = 'BRS01')
+AND prod_price >= 10;
+
+-- 等效于示例2的或运算，不过IN更好，好在更直观，更快，求值顺序不用担心以及可以再包括select语句
+SELECT prod_name, prod_price
+FROM Products
+WHERE vend_id IN ( 'DLL01', 'BRS01' )
+ORDER BY prod_name;
+
+-- 非运算，更复杂的子句会比较有用，与IN搭配
+SELECT prod_name
+FROM Products
+WHERE NOT vend_id = 'DLL01'
+ORDER BY prod_name;
+```
+
+## 通配符进行过滤
+
+对于文本，通常使用通配符来进行过滤，SQL语句中则使用LIKE子句进行通配符过滤。
+
+```mysql
+-- 字符匹配不同系统对于字符大小写是否相同不太一样，在MySQL workbench上是相同的
+
+-- %号代表表示任何字符出现任意次数, Microsoft Access使用*而不是%
+-- 通配符%看起来像是可以匹配任何东西，但有个例外，这就是NULL。
+SELECT prod_id, prod_name
+FROM Products
+WHERE prod_name LIKE 'Fish%';
+
+SELECT prod_id, prod_name
+FROM Products
+WHERE prod_name LIKE '%bean bag%';
+
+-- 注：此匹配必须是F开头，y结尾，有时会存在y后面有空格，此时是不匹配的
+SELECT prod_name
+FROM Products
+WHERE prod_name LIKE 'F%y';
+
+-- _号代表只匹配单个字符，Microsoft Access使用？而不是_
+SELECT prod_id, prod_name
+FROM Products
+WHERE prod_name LIKE '__ inch teddy bear';
+
+-- MySQL不支持中括号的集合操作，下面没有输出，只有微软的Access 和SQL Server 支持集合。
+SELECT cust_contact
+FROM Customers
+WHERE cust_contact LIKE '[JM]%'
+ORDER BY cust_contact;
+```
+
+- 通配符搜索比较耗时，如果用其他操作符搜索可以达到目的，应用其他操作符。
+
+- 通配符置于开始处，搜索起来是最慢的。
+- 仔细注意通配符的位置。
+
+## 创建计算字段
+
+数据库中存储的数据一般不是我们想要的，要从数据库中检索出转换、计算或格式化过的数据，而不是检索
+出数据，然后再在客户端应用程序中重新格式化（增加客户端的负担）。
+
+```mysql
+-- 要生成一个供应商报表，需要在格式化的名称中列出供应商的位置，使用Concat函数组合数据
+SELECT Concat(vend_name, ' (', vend_country, ')')
+FROM Vendors
+ORDER BY vend_name;
+
+-- 上面的列没有名字，客户端无法引用，可以通过AS关键字赋予别名
+SELECT Concat(vend_name, ' (', vend_country, ')')
+	   AS vend_title
+FROM Vendors
+ORDER BY vend_name;
+
+-- 对检索的数据进行算术运算（加减乘除皆可，这里是乘），得到总价格，并使用AS关键词得到别名，方便引用
+SELECT prod_id,
+quantity,
+item_price,
+quantity*item_price AS expanded_price
+FROM OrderItems
+WHERE order_num = 20008;
+```
+
