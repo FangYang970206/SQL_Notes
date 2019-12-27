@@ -198,3 +198,32 @@ FROM OrderItems
 WHERE order_num = 20008;
 ```
 
+## 使用数据处理函数
+
+这一节主要介绍使用数据库中的函数处理数据，当由于不同数据库的函数名不同以及有些并没有，所以书中许多函数的例子在mysql中没有，无法运行。
+
+```mysql
+-- 对字符串取大写
+SELECT vend_name, UPPER(vend_name) AS vend_name_upcase
+FROM Vendors
+ORDER BY vend_name;
+
+-- SOUNDEX是一个将任何文本串转换为描述其语音表示的字母数字模式的算法。打错了字母发音类似也会查找出来
+SELECT cust_name, cust_contact
+FROM Customers
+WHERE SOUNDEX(cust_contact) = SOUNDEX('Michael Green');
+
+-- 得到当前的年份
+SELECT order_num
+FROM Orders
+WHERE YEAR(order_date) = 2012;
+```
+
+以下是一些常用的文本处理函数，MySQL都支持。
+
+<img src="assets/image-20191227222444041.png" alt="image-20191227222444041" style="zoom: 67%;" />
+
+以下是一些常用的数值函数。
+
+<img src="assets/image-20191227222834589.png" alt="image-20191227222834589" style="zoom:67%;" />
+
