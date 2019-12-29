@@ -145,4 +145,114 @@
 -- FROM Orders
 -- WHERE YEAR(order_date) = 2012;
 
+-- --------
+-- 汇总数据
+-- --------
 
+-- SELECT AVG(prod_price) AS avg_price
+-- FROM Products;
+
+-- SELECT AVG(prod_price) AS avg_price
+-- FROM Products
+-- WHERE vend_id = 'DLL01';
+
+-- SELECT COUNT(*) AS num_cust
+-- FROM Customers;
+
+-- SELECT COUNT(cust_email) AS num_cust
+-- FROM Customers;
+
+-- SELECT MAX(prod_price) AS max_price
+-- FROM Products;
+
+-- SELECT MIN(prod_price) AS min_price
+-- FROM Products;
+
+-- SELECT SUM(quantity) AS items_ordered
+-- FROM OrderItems
+-- WHERE order_num = 20005;
+
+-- SELECT SUM(item_price*quantity) AS total_price
+-- FROM OrderItems
+-- WHERE order_num = 20005;
+
+-- SELECT AVG(DISTINCT prod_price) AS avg_price
+-- FROM Products
+-- WHERE vend_id = 'DLL01';
+
+-- SELECT COUNT(*) AS num_items,
+-- 	   MIN(prod_price) AS price_min,
+-- 	   MAX(prod_price) AS price_max,
+-- 	   AVG(prod_price) AS price_avg
+-- FROM Products;
+
+-- --------
+-- 分组数据
+-- --------
+
+-- SELECT COUNT(*) AS num_prods
+-- FROM Products
+-- WHERE vend_id = 'DLL01';
+
+-- SELECT vend_id, COUNT(*) AS num_prods
+-- FROM Products
+-- GROUP BY vend_id;
+
+-- SELECT cust_id, COUNT(*) AS orders
+-- FROM Orders
+-- GROUP BY cust_id
+-- HAVING COUNT(*) >= 2;
+
+-- SELECT vend_id, COUNT(*) AS num_prods
+-- FROM Products
+-- WHERE prod_price >= 4
+-- GROUP BY vend_id
+-- HAVING COUNT(*) >= 2;
+
+-- SELECT vend_id, COUNT(*) AS num_prods
+-- FROM Products
+-- GROUP BY vend_id
+-- HAVING COUNT(*) >= 2;
+
+-- SELECT order_num, COUNT(*) AS items
+-- FROM OrderItems
+-- GROUP BY order_num
+-- HAVING COUNT(*) >= 3;
+
+-- SELECT order_num, COUNT(*) AS items
+-- FROM OrderItems
+-- GROUP BY order_num
+-- HAVING COUNT(*) >= 3
+-- ORDER BY items, order_num;
+
+-- ----------
+-- 使用子查询
+-- ----------
+
+-- SELECT order_num
+-- FROM OrderItems
+-- WHERE prod_id = 'RGAN01';
+
+-- SELECT cust_id
+-- FROM Orders
+-- WHERE order_num IN (20007,20008);
+
+-- SELECT cust_name, cust_contact
+-- FROM Customers
+-- WHERE cust_id IN ('1000000004','1000000005');
+
+-- SELECT cust_name, cust_contact
+-- FROM Customers
+-- WHERE cust_id IN (SELECT cust_id
+-- 				  FROM Orders
+-- 				  WHERE order_num IN (SELECT order_num
+-- 								      FROM OrderItems
+-- 									  WHERE prod_id = 'RGAN01'));
+
+-- SELECT cust_name,
+--        cust_state,
+--        (SELECT COUNT(*)
+-- 	    FROM Orders
+-- 		WHERE Orders.cust_id = Customers.cust_id) AS orders
+-- FROM Customers
+-- ORDER BY cust_name;

@@ -227,3 +227,176 @@ WHERE YEAR(order_date) = 2012;
 
 <img src="assets/image-20191227222834589.png" alt="image-20191227222834589" style="zoom:67%;" />
 
+## 汇总数据
+
+这节是聚集函数进行汇总数据，有以下五个函数：
+
+<img src="assets/image-20191229154029240.png" alt="image-20191229154029240" style="zoom:80%;" />
+
+代码如下：
+
+```mysql
+SELECT AVG(prod_price) AS avg_price
+FROM Products;
+
+SELECT AVG(prod_price) AS avg_price
+FROM Products
+WHERE vend_id = 'DLL01';
+
+-- COUNT(*)对表中行的数目进行计数，不管表列中包含的是空值还是非空值。
+SELECT COUNT(*) AS num_cust
+FROM Customers;
+
+-- 没有*号就忽略空值
+SELECT COUNT(cust_email) AS num_cust
+FROM Customers;
+
+SELECT MAX(prod_price) AS max_price
+FROM Products;
+
+SELECT MIN(prod_price) AS min_price
+FROM Products;
+
+SELECT SUM(quantity) AS items_ordered
+FROM OrderItems
+WHERE order_num = 20005;
+
+SELECT SUM(item_price*quantity) AS total_price
+FROM OrderItems
+WHERE order_num = 20005;
+
+-- DISTINCT是去除重值
+SELECT AVG(DISTINCT prod_price) AS avg_price
+FROM Products
+WHERE vend_id = 'DLL01';
+
+SELECT COUNT(*) AS num_items,
+	   MIN(prod_price) AS price_min,
+	   MAX(prod_price) AS price_max,
+	   AVG(prod_price) AS price_avg
+FROM Products;
+```
+
+## 分组数据
+
+这一节是将数据分组，使用GROUP by 和 HAVING 子句。
+
+```mysql
+-- 单个列单个类别的统计
+SELECT COUNT(*) AS num_prods
+FROM Products
+WHERE vend_id = 'DLL01';
+
+-- 使用GROUP BY对单个列多个类别进行统计
+SELECT vend_id, COUNT(*) AS num_prods
+FROM Products
+GROUP BY vend_id;
+
+-- GROUP BY分组，HAVING进行组别过滤
+SELECT cust_id, COUNT(*) AS orders
+FROM Orders
+GROUP BY cust_id
+HAVING COUNT(*) >= 2;
+
+-- WHERE过滤行，然后GROUP BY分组，最后使用HAVING过滤
+SELECT vend_id, COUNT(*) AS num_prods
+FROM Products
+WHERE prod_price >= 4
+GROUP BY vend_id
+HAVING COUNT(*) >= 2;
+
+-- GROUP BY分组，最后使用HAVING过滤
+SELECT vend_id, COUNT(*) AS num_prods
+FROM Products
+GROUP BY vend_id
+HAVING COUNT(*) >= 2;
+
+-- GROUP BY分组，HAVING过滤，最后ORDER BY排序 
+SELECT order_num, COUNT(*) AS items
+FROM OrderItems
+GROUP BY order_num
+HAVING COUNT(*) >= 3
+ORDER BY items, order_num;
+```
+
+GROUP BY子句的重要规定：
+
+<img src="assets/image-20191229164429037.png" alt="image-20191229164429037" style="zoom: 67%;" />
+
+HAVING和WHRER的区别：
+
+<img src="assets/image-20191229164534027.png" alt="image-20191229164534027" style="zoom:67%;" />
+
+ORDER BY和GROUP BY的区别：
+
+<img src="assets/image-20191229164629859.png" alt="image-20191229164629859" style="zoom:67%;" />
+
+SELECT子句顺序：
+
+<img src="assets/image-20191229164716526.png" alt="image-20191229164716526" style="zoom:67%;" />
+
+## 使用子查询
+
+迄今为止所看到的所有SELECT 语句都是简单查询，即从单个数据库表中检索数据的单条语句。SQL 还允许创建子查询（subquery），即嵌套在其他查询中的查询。书中使用的数据库表都是关系表，订单存储在两个表中。每个订单包含订单编号、客户ID、订单日期，在Orders 表中存储为一行。各订单的物品存储在相关的OrderItems 表中。Orders 表不存储顾客信息，只存储顾客ID。顾客的实际信息存储在Customers 表中。
+
+假如需要列出订购物品RGAN01 的所有顾客，应该怎样检索？下面列出具体的步骤。
+
+1. 检索包含物品RGAN01 的所有订单的编号。
+2. 检索具有前一步骤列出的订单编号的所有顾客的ID。
+3. 检索前一步骤返回的所有顾客ID 的顾客信息。
+
+每一步可以作为一个单独的查询进行。可以把一条SELECT 语句返回的结果用于另一条SELECT 语句的WHERE 子句。也可以使用子查询来把3个查询组合成一条语句。
+
+```mysql
+-- 分以下三个查询子句
+SELECT order_num
+FROM OrderItems
+WHERE prod_id = 'RGAN01';
+
+SELECT cust_id
+FROM Orders
+WHERE order_num IN (20007,20008); -- (20007,20008)是上一句的结果
+
+SELECT cust_name, cust_contact
+FROM Customers
+WHERE cust_id IN ('1000000004','1000000005'); -- ('1000000004','1000000005')上一句的结果
+```
+
+或者使用子查询把以上三个查询组合成一条语句：
+
+```mysql
+-- WHERE 子句中使用子查询能够编写出功能很强且很灵活的SQL语句。
+-- 作为子查询的SELECT 语句只能查询单个列。企图检索多个列将返回错误。
+SELECT cust_name, cust_contact
+FROM Customers
+WHERE cust_id IN (SELECT cust_id
+				  FROM Orders
+				  WHERE order_num IN (SELECT order_num
+								      FROM OrderItems
+									  WHERE prod_id = 'RGAN01'));
+```
+
+<img src="assets/image-20191229175913396.png" alt="image-20191229175913396" style="zoom: 67%;" />
+
+使用子查询的另一方法是创建计算字段。假如需要显示Customers 表中每个顾客的订单总数。订单与相应的顾客ID 存储在Orders 表中。
+
+执行这个操作，要遵循下面的步骤：
+
+1. 从Customers 表中检索顾客列表；
+2.  对于检索出的每个顾客，统计其在Orders 表中的订单数目。 
+
+代码如下：
+
+```mysql
+-- orders就是一个计算字段，当中使用了完全限定列名，由于cust_id在两个表中都存在，所以需要指定完全限定--- 列名，不然会认为orders表中的cust_id与自己比较
+SELECT cust_name,
+       cust_state,
+       (SELECT COUNT(*)
+	    FROM Orders
+		WHERE Orders.cust_id = Customers.cust_id) AS orders
+FROM Customers
+ORDER BY cust_name;
+```
+
+## 联结表
+
