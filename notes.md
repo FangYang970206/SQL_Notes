@@ -383,7 +383,7 @@ WHERE cust_id IN (SELECT cust_id
 执行这个操作，要遵循下面的步骤：
 
 1. 从Customers 表中检索顾客列表；
-2.  对于检索出的每个顾客，统计其在Orders 表中的订单数目。 
+2. 对于检索出的每个顾客，统计其在Orders 表中的订单数目。 
 
 代码如下：
 
@@ -399,4 +399,55 @@ ORDER BY cust_name;
 ```
 
 ## 联结表
+
+这一节是介绍如何将多个表联结起来，是SQL的极为重要的部分。关系表的设计就是要把信息分解成多个表，一类数据一个表。各表通过某些共同的值互相关联，所以叫关系型数据库。
+
+例如，将产品和供应商分开用表进行存储的理由是：
+
+- 同一供应商生产的每个产品，其供应商信息都是相同的，对每个产品重复此信息既浪费时间又浪费存储空间；
+- 如果供应商信息发生变化，例如供应商迁址或电话号码变动，只需修改一次即可；
+- 由于数据不重复，数据显然是一致的，使得处理数据和生成报表更简单。
+
+- 可伸缩性好, 能够适应不断增加的工作量而不失败。
+
+建立这种关系表也是有代价的, 如果数据存储在多个表, 怎样使用一条select语句检索数据? 
+
+SQL的答案是联结, ，联结是一种机制，用来在一条SELECT 语句中关联表，因此称为联结。使用特殊的语法，可以联结多个表返回一组输出，联结在运行时关联表中正确的行。
+
+```mysql
+-- select选择的列From两个表, 通过where子句进行联结, 需要指定完全限定列名, 不然不知道是哪个vend_id
+SELECT vend_name, prod_name, prod_price
+FROM Vendors, Products
+WHERE Vendors.vend_id = Products.vend_id;
+
+-- 没有where,将是两个表的笛卡尔积,也就是两个表的行数相乘所得的表.又称叉联结
+SELECT vend_name, prod_name, prod_price
+FROM Vendors, Products;
+
+-- 第一个sql语句是简单形式,这个是标准形式, 等值联结, 又称内联结.
+SELECT vend_name, prod_name, prod_price
+FROM Vendors INNER JOIN Products
+ON Vendors.vend_id = Products.vend_id;
+
+-- 联结三个表,有三个限制条件,前两个是联结三个表,最后一个是过滤订单
+-- 注: 联结的表越多,性能越差
+SELECT prod_name, vend_name, prod_price, quantity
+FROM OrderItems, Products, Vendors
+WHERE Products.vend_id = Vendors.vend_id
+AND OrderItems.prod_id = Products.prod_id
+AND order_num = 20007;
+
+-- 上一讲的子查询用联结表写,更加清晰.
+SELECT cust_name, cust_contact
+FROM Customers, Orders, OrderItems
+WHERE Customers.cust_id = Orders.cust_id
+AND OrderItems.order_num = Orders.order_num
+AND prod_id = 'RGAN01';
+```
+
+
+
+
+
+
 
