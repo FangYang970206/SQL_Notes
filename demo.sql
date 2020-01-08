@@ -354,5 +354,137 @@
 -- 组合查询
 -- --------
 
+-- SELECT cust_name, cust_contact, cust_email
+-- FROM Customers
+-- WHERE cust_state IN ('IL','IN','MI')
+-- UNION
+-- SELECT cust_name, cust_contact, cust_email
+-- FROM Customers
+-- WHERE cust_name = 'Fun4All';
+
+-- SELECT cust_name, cust_contact, cust_email
+-- FROM Customers
+-- WHERE cust_state IN ('IL','IN','MI')
+-- OR cust_name = 'Fun4All';
+
+-- SELECT cust_name, cust_contact, cust_email
+-- FROM Customers
+-- WHERE cust_state IN ('IL','IN','MI')
+-- UNION
+-- SELECT cust_name, cust_contact, cust_email
+-- FROM Customers
+-- WHERE cust_name = 'Fun4All'
+-- ORDER BY cust_name, cust_contact;
+
+-- --------
+-- 插入数据
+-- --------
+
+-- INSERT INTO Customers
+-- VALUES('1000000006',
+-- 		'Toy Land',
+-- 		'123 Any Street',
+-- 		'New York',
+-- 		'NY',
+-- 		'11111',
+-- 		'USA',
+-- 		NULL,
+-- 		NULL);
+
+-- INSERT INTO Customers(cust_id,
+-- 					  cust_name,
+-- 					  cust_address,
+-- 					  cust_city,
+-- 					  cust_state,
+-- 					  cust_zip,
+-- 					  cust_country,
+-- 					  cust_contact,
+-- 					  cust_email)
+-- VALUES('1000000007',
+-- 		'Toy Land',
+-- 		'123 Any Street',
+-- 		'New York',
+-- 		'NY',
+-- 		'11111',
+-- 		'USA',
+-- 		NULL,
+-- 		NULL);
+
+-- INSERT INTO Customers(cust_id,
+-- 					  cust_contact,
+-- 					  cust_email,
+-- 					  cust_name,
+-- 					  cust_address,
+-- 					  cust_city,
+-- 					  cust_state,
+-- 					  cust_zip)
+-- VALUES('1000000008',
+-- 		NULL,
+-- 		NULL,
+-- 		'Toy Land',
+-- 		'123 Any Street',
+-- 		'New York',
+-- 		'NY',
+-- 		'11111');
+--         
+-- INSERT INTO Customers(cust_id,
+-- 					  cust_name,
+-- 					  cust_address,
+-- 					  cust_city,
+-- 					  cust_state,
+-- 					  cust_zip,
+-- 					  cust_country)
+-- VALUES('1000000009',
+-- 		'Toy Land',
+-- 		'123 Any Street',
+-- 		'New York',
+-- 		'NY',
+-- 		'11111',
+-- 		'USA');
+        
+-- INSERT INTO Customers(cust_id,
+-- 					  cust_contact,
+-- 					  cust_email,
+-- 					  cust_name,
+-- 					  cust_address,
+-- 					  cust_city,
+-- 					  cust_state,
+-- 					  cust_zip,
+-- 					  cust_country)
+-- SELECT cust_id,
+-- 	cust_contact,
+-- 	cust_email,
+-- 	cust_name,
+-- 	cust_address,
+-- 	cust_city,
+-- 	cust_state,
+-- 	cust_zip,
+-- 	cust_country
+-- FROM CustNew;
+
+-- CREATE TABLE CustCopy LIKE Customers;
+-- INSERT INTO CustCopy SELECT * FROM Customers;
+
+-- CREATE TABLE CustCopy1 SELECT * FROM Customers;
+
+-- -------------
+-- 更新和删除数据
+-- -------------
+
+-- UPDATE Customers
+-- SET cust_email = 'kim@thetoystore.com'
+-- WHERE cust_id = '1000000005';
+
+-- UPDATE Customers
+-- SET cust_contact = 'Sam Roberts',
+--     cust_email = 'sam@toyland.com'
+-- WHERE cust_id = '1000000006';
+
+-- UPDATE Customers
+-- SET cust_email = NULL
+-- WHERE cust_id = '1000000005';
+
+-- DELETE FROM Customers
+-- WHERE cust_id = '1000000006';
 
 

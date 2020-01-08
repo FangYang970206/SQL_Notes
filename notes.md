@@ -569,5 +569,265 @@ GROUP BY Customers.cust_id;
 
 多数情况下，组合相同表的两个查询所完成的工作与具有多个WHERE子句条件的一个查询所完成的工作相同。
 
+假如需要Illinois、Indiana 和Michigan 等美国几个州的所有顾客的报表，还想包括不管位于哪个州的所有的Fun4All。有以下两种方式：
 
+```mysql
+-- 基于UNION，组合两个SELECT的结果
+SELECT cust_name, cust_contact, cust_email
+FROM Customers
+WHERE cust_state IN ('IL','IN','MI')
+UNION
+SELECT cust_name, cust_contact, cust_email
+FROM Customers
+WHERE cust_name = 'Fun4All';
+
+-- 使用WHERE，多个约束条件
+SELECT cust_name, cust_contact, cust_email
+FROM Customers
+WHERE cust_state IN ('IL','IN','MI')
+OR cust_name = 'Fun4All';
+```
+
+多数好的DBMS使用内部查询优化程序，在处理各条SELECT 语句前组合它们。理论上讲，这意味着从性能上看使用多条WHERE 子句条件还是UNION 应该没有实际的差别。实际还需要进行测试。
+
+UNION组合规则：
+
+- UNION 必须由两条或两条以上的SELECT 语句组成，语句之间用关键字UNION 分隔。（语句之间隔UNION）
+- UNION 中的每个查询必须包含相同的列、表达式或聚集函数（不过，各个列不需要以相同的次序列出）。
+
+- 列数据类型必须兼容：类型不必完全相同，但必须是DBMS 可以隐含转换的类型（例如，不同的数值类型或不同的日期类型）。
+
+UNION默认会删除重复的行，如果想保留重复的行，需要使用UNION ALL。如下所示：
+
+```mysql
+-- 与上面相比多了一行，两个查询都有该行，UNION ALL完成WHERE子句完成不了的工作。
+SELECT cust_name, cust_contact, cust_email
+FROM Customers
+WHERE cust_state IN ('IL','IN','MI')
+UNION ALL
+SELECT cust_name, cust_contact, cust_email
+FROM Customers
+WHERE cust_name = 'Fun4All';
+```
+
+在用UNION 组合查询时，只能使用一条ORDER BY 子句，它必须位于最后一条SELECT 语句之后。对于结果集，不存在用一种方式排序一部分，而又用另一种方式排序另一部分的情况，因此不允许使用多条ORDER BY 子句。
+
+```mysql
+-- ORDER BY子句是用来排序所有SELECT 语句返回的所有结果。
+SELECT cust_name, cust_contact, cust_email
+FROM Customers
+WHERE cust_state IN ('IL','IN','MI')
+UNION
+SELECT cust_name, cust_contact, cust_email
+FROM Customers
+WHERE cust_name = 'Fun4All'
+ORDER BY cust_name, cust_contact;
+```
+
+使用UNION 可极大地简化复杂的WHERE 子句，简化从多个表中检索数据的工作。
+
+## 插入数据
+
+这一节是将如何向表中插入数据。INSERT 用来将行插入（或添加）到数据库表。插入有几种方式：
+
+- 插入完整的行；
+- 插入行的一部分；
+- 插入某些查询的结果。
+
+插入需要注意的是主键必须在表中不存在，如果冲突，插入失败，Customers的主键是cust_id。
+
+第一种方式插入完整的行是将表中每一列的数据在VALUES 子句中给出，必须给每一列提供一个值。如果某列没有值，如上面的cust_contact 和cust_email 列，则应该使用NULL 值。**这种语法很简单，但并不安全，应该尽量避免使用。这种方式高度依赖于表中列的定义次序，即使可以得到这种次序信息，也不能保证各列在下一次表结构变动后保持完全相同的次序。**
+
+```mysql
+
+INSERT INTO Customers
+VALUES('1000000006',
+		'Toy Land',
+		'123 Any Street',
+		'New York',
+		'NY',
+		'11111',
+		'USA',
+		NULL,
+		NULL);
+```
+
+第二种是更加安全的方式，不过要更繁琐一些。在表名后的括号里明确给出了列名。在插入行时，DBMS 将用VALUES 列表中的相应值填入列表中的对应项。其优点是，即使表的结构改变，这条INSERT 语句仍然能正确工作。
+
+```mysql
+INSERT INTO Customers(cust_id,
+					  cust_name,
+					  cust_address,
+					  cust_city,
+					  cust_state,
+					  cust_zip,
+					  cust_country,
+					  cust_contact,
+					  cust_email)
+VALUES('1000000007',
+		'Toy Land',
+		'123 Any Street',
+		'New York',
+		'NY',
+		'11111',
+		'USA',
+		NULL,
+		NULL);
+
+-- 顺序随机打乱也没有关系，只要对应上就行
+INSERT INTO Customers(cust_id,
+					  cust_contact,
+					  cust_email,
+					  cust_name,
+					  cust_address,
+					  cust_city,
+					  cust_state,
+					  cust_zip)
+VALUES('1000000008',
+		NULL,
+		NULL,
+		'Toy Land',
+		'123 Any Street',
+		'New York',
+		'NY',
+		'11111');
+```
+
+不管使用哪种INSERT 语法，VALUES 的数目都必须正确。如果不提供列名，则必须给每个表列提供一个值；如果提供列名，则必须给列出的每个列一个值。否则，就会产生一条错误消息，相应的行不能成功插入。
+
+使用INSERT 的推荐方法是明确给出表的列名。使用这种语法，还可以省略列，这表示可以只给某些列提供值，给其他列不提供值。如下：
+
+```mysql
+INSERT INTO Customers(cust_id,
+					  cust_name,
+					  cust_address,
+					  cust_city,
+					  cust_state,
+					  cust_zip,
+					  cust_country)
+VALUES('1000000009',
+		'Toy Land',
+		'123 Any Street',
+		'New York',
+		'NY',
+		'11111',
+		'USA');
+```
+
+如果表的定义允许，则可以在INSERT 操作中省略某些列。省略的列必须满足以下某个条件。
+
+- 该列定义为允许NULL 值（无值或空值）。
+- 在表定义中给出默认值。这表示如果不给出值，将使用默认值。
+
+如果表中不允许有NULL 值或者默认值，却省略了表中的值，DBMS 就会产生错误消息，相应行不能成功插入。
+
+INSERT最后一种方式是插入查询结果，叫INSERT SELECT，如下所示：
+
+- **注意：以下语句并不能运行，因为CustNew表并不存在，只是示范**
+
+```mysql
+-- 从CustNew表中查询出要插入到Customers表的信息，插入的行数等于查询到的行数
+INSERT INTO Customers(cust_id,
+					  cust_contact,
+					  cust_email,
+					  cust_name,
+					  cust_address,
+					  cust_city,
+					  cust_state,
+					  cust_zip,
+					  cust_country)
+SELECT cust_id,
+	cust_contact,
+	cust_email,
+	cust_name,
+	cust_address,
+	cust_city,
+	cust_state,
+	cust_zip,
+	cust_country
+FROM CustNew;
+```
+
+INSERT SELECT 中SELECT 语句可以包含WHERE 子句，以过滤插入的数据。
+
+SQL还支持从一个表复制到另一个表，有以下两种形式（需要注意的是，执行完命令后可能在数据库中并没有出现复制的表，此时需要更新数据库，右键数据库tysql, 点击refresh all刷新数据库：
+
+```mysql
+-- 第一句只复制表结构到新表，第二句插入内容到新表
+CREATE TABLE CustCopy LIKE Customers;
+INSERT INTO CustCopy SELECT * FROM Customers;
+
+-- 第二种方式是直接复制表的结构和数据
+CREATE TABLE CustCopy1 SELECT * FROM Customers;
+```
+
+复制到新表需要知道：
+
+- 任何SELECT 选项和子句都可以使用，包括WHERE 和GROUP BY；
+- 可利用联结从多个表插入数据；
+- 不管从多少个表中检索数据，数据都只能插入到一个表中。
+
+## 更新和删除数据
+
+更新（修改）表中的数据，可以使用UPDATE 语句。有两种使用UPDATE的方式：
+
+- 更新表中的特定行；
+- 更新表中的所有行。
+
+基本的UPDATE 语句由三部分组成，分别是：
+
+- 要更新的表；
+- 列名和它们的新值；
+- **确定要更新哪些行的过滤条件（这个很重要，不加过滤条件，则会更新所有的行）。**
+
+客户1000000005 现在有了电子邮件地址，因此他的记录需要更新，语句如下：
+
+```mysql
+UPDATE Customers
+SET cust_email = 'kim@thetoystore.com'
+WHERE cust_id = '1000000005';
+```
+
+更新多个列则稍有不同, 只需要一个SET即可：
+
+```mysql
+UPDATE Customers
+SET cust_contact = 'Sam Roberts',
+    cust_email = 'sam@toyland.com'
+WHERE cust_id = '1000000006';
+```
+
+删除某个列的值可以设置空值
+
+```mysql
+UPDATE Customers
+SET cust_email = NULL
+WHERE cust_id = '1000000005';
+```
+
+删除表中的数据，可以使用DELETE语句。也有两个方式：
+
+- 从表中删除特定的行；
+- 从表中删除所有行。
+
+同样的，删除时需要加入过滤条件，不然就是删除所有的行了。
+
+下面是只删除顾客1000000006：
+
+```mysql
+DELETE FROM Customers
+WHERE cust_id = '1000000006';
+```
+
+DELETE 语句从表中删除行，甚至是删除表中所有行。但是，DELETE不删除表本身。如果想从表中删除所有行，不要使用DELETE。可使用TRUNCATE TABLE语句，它完成相同的工作，而速度更快（因为不记录数据的变动）。
+
+**更新和删除的指导原则**:
+
+- 除非确实打算更新和删除每一行，否则绝对不要使用不带WHERE 子句的UPDATE 或DELETE 语句。
+- 保证每个表都有主键（如果忘记这个内容，请参阅第12 课），尽可能像WHERE 子句那样使用它（可以指定各主键、多个值或值的范围）
+- 在UPDATE 或DELETE 语句使用WHERE 子句前，应该先用SELECT 进行测试，保证它过滤的是正确的记录，以防编写的WHERE 子句不正确。
+- 使用强制实施引用完整性的数据库（关于这个内容，请参阅书103页），这样DBMS 将不允许删除其数据与其他表相关联的行。
+- 有的DBMS 允许数据库管理员施加约束，防止执行不带WHERE 子句的UPDATE 或DELETE 语句。如果所采用的DBMS 支持这个特性，应该使用它。
+
+若是SQL 没有撤销（undo）按钮，应该非常小心地使用UPDATE 和DELETE，否则你会发现自己更新或删除了错误的数据。
 
