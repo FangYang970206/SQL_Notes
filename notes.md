@@ -27,7 +27,7 @@
 
 ![image-20191220120534569](assets/image-20191220120534569.png)
 
-在Schemas中双击我们刚刚创建的tysql数据库, 然后在上面的百度云盘中, 有一个data文件夹用来生成数据, 我们把create.txt的内容拷贝到Query1窗口下, 然后点击 Query1窗口的第一个闪电运行程序, 运行完成后, 清空Query1的内容, 再把populate.txt的内容拷贝到Query1窗口下, 点击闪电运行程序, 运行完成后右键数据库tysql, 点击refresh all刷新数据库, Tables就会出现5个tables.
+在Schemas中双击我们刚刚创建的tysql数据库, 然后在上面的百度云盘中, 有一个data文件夹用来生成数据, 我们把create.sql的内容拷贝到Query1窗口下, 然后点击 Query1窗口的第一个闪电运行程序, 运行完成后, 清空Query1的内容, 再把populate.sql的内容拷贝到Query1窗口下, 点击闪电运行程序, 运行完成后右键数据库tysql, 点击refresh all刷新数据库, Tables就会出现5个tables.
 
 ## 检索数据
 
@@ -830,4 +830,116 @@ DELETE 语句从表中删除行，甚至是删除表中所有行。但是，DELE
 - 有的DBMS 允许数据库管理员施加约束，防止执行不带WHERE 子句的UPDATE 或DELETE 语句。如果所采用的DBMS 支持这个特性，应该使用它。
 
 若是SQL 没有撤销（undo）按钮，应该非常小心地使用UPDATE 和DELETE，否则你会发现自己更新或删除了错误的数据。
+
+## 创建和操纵表
+
+这一节是讲创建、更改和删除表的基本知识。
+
+创建表主要有两个方式：
+
+- 在DBMS 都具有交互式创建和管理数据库表的工具，在MySQL workbench上就是右键数据库中的Tables，点击create table；
+- 表也可以直接用SQL的CREATE TABLE 语句创建。
+
+使用交互式工具时实际上就是使用SQL 语句。这些语句不是用户编写的，工具会自动生成并执行相应的SQL语句.
+
+利用CREATE TABLE创建表，必须给出下列信息：
+
+- 新表的名字，在关键字CREATE TABLE 之后给出；
+- 表列的名字和定义，用逗号分隔；
+- 有的DBMS 还要求指定表的位置。
+
+如目前所用的Products 表：
+
+```mysql
+-- 为了防止与数据库表名冲突，命名为Product1
+CREATE TABLE Products1
+(
+	prod_id     CHAR(10)        NOT NULL,
+	vend_id     CHAR(10)        NOT NULL,
+	prod_name   CHAR(254)       NOT NULL,
+	prod_price  DECIMAL(8,2)    NOT NULL,
+	prod_desc   VARCHAR(1000)   NULL
+);
+```
+
+表名紧跟CREATE TABLE 关键字。实际的表定义（所有列）括在圆括号之中，各列之间用逗号分隔。这个表由5列组成。每列的定义以列名（它在表中必须是唯一的）开始，后跟列的数据类型，最后跟着该列是否可以为空，NULL代表可以为空，NOT NULL表示不能为空，允许NULL 值的列也允许在插入行时不给出该列的值。不允许NULL 值的列不接受没有列值的行。
+
+如果没有写是否为空，则默认为空(某些DBMS必须指定NULL）：
+
+```mysql
+CREATE TABLE Vendors1
+(
+	vend_id      	CHAR(10)   NOT NULL,
+	vend_name    	CHAR(50)   NOT NULL,
+	vend_address 	CHAR(50)   ,
+	vend_city    	CHAR(50)   ,
+	vend_state   	CHAR(5)    ,
+	vend_zip     	CHAR(10)   ,
+	vend_country 	CHAR(50)
+);
+```
+
+还可以给列赋予默认值，没有给值，采用默认值，使用关键字DEFAULT指定。
+
+```mysql
+CREATE TABLE OrderItems1
+(
+	order_num  		INTEGER    		NOT NULL,
+	order_item 		INTEGER    		NOT NULL,
+	prod_id    		CHAR(10)   		NOT NULL,
+	quantity   		INTEGER    		NOT NULL 	DEFAULT 1, -- 默认物品数为1
+	item_price 		DECIMAL(8,2) 	NOT NULL
+);
+```
+
+还可以给时间设置默认值
+
+```mysql
+CREATE TABLE Orders1
+(
+	order_num    INTEGER     NOT NULL,
+	order_date   DATETIME    NOT NULL   DEFAULT NOW(),
+	cust_id      CHAR(10)    NOT NULL
+);
+```
+
+更新表定义，可以使用ALTER TABLE 语句。使用ALTER TABLE 时需要考虑的事情:
+
+- 理想情况下，不要在表中包含数据时对其进行更新。应该在表的设计过程中充分考虑未来可能的需求，避免今后对表的结构做大改动。
+- 所有的DBMS 都允许给现有的表增加列，不过对所增加列的数据类型（以及NULL 和DEFAULT 的使用）有所限制。
+- 许多DBMS 不允许删除或更改表中的列。
+- 多数DBMS 允许重新命名表中的列。
+- 许多DBMS 限制对已经填有数据的列进行更改，对未填有数据的列几乎没有限制。
+
+使用ALTER TABLE 更改表结构需要给出要更改的表名以及要列出要做哪些更改。
+
+如，给Vendors增加一列
+
+```mysql
+ALTER TABLE Vendors
+ADD vend_phone CHAR(20);
+```
+
+给Vendors删除一列
+
+```mysql
+ALTER TABLE Vendors
+DROP COLUMN vend_phone;
+```
+
+复杂的表结构更改一般需要手动删除过程, 需要进行备份，创建一个新表，将旧表拷贝过去，这是因为ALTER TABLE对数据库表的更改不能撤销，如果增加了不需要的列，也许无法删除它们。类似地，如果删除了不应该删除的列，可能会丢失该列中的所有数据。
+
+删除表使用DROP TABLE语句即可：
+
+```mysql
+DROP TABLE CustCopy;
+```
+
+这条语句删除CustCopy表。删除表没有确认，也不能撤销，执行这条语句将永久删除该表。
+
+还可以对表进行重命名，使用RENAME语句。
+
+```mysql
+ALTER TABLE vendors1 RENAME To vendors2;
+```
 
