@@ -1,6 +1,6 @@
 # SQL Notes
 
-记录一下学习SQL必知必会一书的笔记。
+记录一下学习《SQL必知必会》以及部分《MySQL必知必会》的笔记（从视图一节开始之后的章节都是《MySQL必知必会》）。个人觉得最好从头直接看《MySQL必知必会》，MySQL应用最广泛，《MySQL必知必会》完全针对MySQL，SQL为了考虑各种数据库有些乱，不过游标之前的章节两个差别不大。
 
 [TOC]
 
@@ -942,4 +942,374 @@ DROP TABLE CustCopy;
 ```mysql
 ALTER TABLE vendors1 RENAME To vendors2;
 ```
+
+## 使用视图
+
+视图是虚拟的表。与包含数据的表不一样，视图只包含使用时动态检索数据的查询。
+
+结合例子会更加清晰：
+
+```mysql
+SELECT cust_name, cust_contact
+FROM Customers, Orders, OrderItems
+WHERE Customers.cust_id = Orders.cust_id
+  AND OrderItems.order_num = Orders.order_num
+  AND prod_id = 'RGAN01';
+```
+
+上面的查询用来检索订购了RGAN01产品的顾客。如果要检索其他产品的顾客，上面查询要替换prod_id, 前面的语句都不变，每次查找其他产品都要写前面，重复性高，前面的语句能否封装一下，让查询变得更为简单和清晰呢，像下面这样
+
+```mysql
+SELECT cust_name, cust_contact
+FROM ProductCustomers
+WHERE prod_id = 'RGAN01';
+```
+
+这是可以的，利用视图。把重复的查询包装成一个名为ProductCustomers的虚拟表，查询产品就变得即为简单了。这只是视图的应用之一，视图的常见应用如下：
+
+- 重用SQL语句
+- 简化复杂的SQL 操作。在编写查询后，可以方便地重用它而不必知道其基本查询细节。
+- 使用表的一部分而不是整个表。
+- 保护数据。可以授予用户访问表的特定部分的权限，而不是整个表的访问权限。
+- 更改数据格式和表示。视图可返回与底层表的表示和格式不同的数据。
+
+创建视图之后，可以用与表基本相同的方式使用它们。可以对视图执行SELECT 操作，过滤和排序数据，将视图联结到其他视图或表。甚至添加和更新数据。
+
+视图的规则和限制：
+
+- 与表一样，视图必须唯一命名
+- 对于可以创建的视图数目没有限制。
+- 创建视图，必须具有足够的访问权限。这些权限通常由数据库管理人员授予。
+- 视图可以嵌套，即可以利用从其他视图中检索数据的查询来构造视图。视图嵌套可能会严重影响性能，产品使用前，需要进行测试。
+- 视图不能索引，也不能有关联的触发器或默认值。
+- ORDER BY可以用在视图中，但如果从该视图检索数据SELECT中也含有ORDER BY，那么该视图中的ORDER BY将被覆盖。
+- 视图不能索引，也不能有关联的触发器或默认值。
+- 视图可以和表一起使用。例如，编写一条联结表和视图的SELECT语句。
+
+视图用CREATE VIEW 语句来创建。
+
+删除视图，可以使用DROP语句，其语法为DROP VIEW viewname;。
+
+使用SHOW CREATE VIEW viewname；来查看创建视图的语句。
+
+更新视图时，可以先用DROP再用CREATE，也可以直接用CREATE OR REPLACE VIEW。如果要更新的视图不存在，则第2条更新语句会创建一个视图；如果要更新的视图存在，则第2条更新语句会替换原有视图。
+
+下面是利用视图简化复杂的联结：
+
+```mysql
+CREATE VIEW ProductCustomers AS
+SELECT cust_name, cust_contact, prod_id
+FROM Customers, Orders, OrderItems
+WHERE Customers.cust_id = Orders.cust_id
+AND OrderItems.order_num = Orders.order_num;
+```
+
+然后检索订购了产品RGAN01 的顾客，可如下进行：
+
+```mysql
+SELECT cust_name, cust_contact
+FROM ProductCustomers
+WHERE prod_id = 'RGAN01';
+```
+
+> **提示：创建可重用的视图**
+> 创建不绑定特定数据的视图是一种好办法。例如，上面创建的视图返回订购所有产品而不仅仅是RGAN01 的顾客（这个视图先创建）。扩展视图的范围不仅使得它能被重用，而且可能更有用。这样做不需要创建和维护多个类似视图。
+
+视图的另一常见用途是重新格式化检索出的数据。下面是没有使用视图的格式化。
+
+```mysql
+SELECT RTRIM(vend_name) + ' (' + RTRIM(vend_country) + ')'
+AS vend_title
+FROM Vendors
+ORDER BY vend_name;
+```
+
+建立上面的视图：
+
+```mysql
+CREATE VIEW VendorLocations AS
+SELECT RTRIM(vend_name) + ' (' + RTRIM(vend_country) + ')'
+AS vend_title
+FROM Vendors;
+```
+
+要检索数据，创建所有的邮件标签，可如下进行：
+
+```mysql
+SELECT *
+FROM VendorLocations;
+```
+
+视图还可以用来过滤不想要的数据
+
+```mysql
+CREATE VIEW CustomerEMailList AS
+SELECT cust_id, cust_name, cust_email
+FROM Customers
+WHERE cust_email IS NOT NULL;
+```
+
+这里的WHERE 子句过滤了cust_email 列中具有NULL 值的那些行，使它们不被检索出来。
+
+然后像其他表一样使用视图
+
+```mysql
+SELECT *
+FROM CustomerEMailList;
+```
+
+在简化计算字段的使用上，视图也特别有用。
+
+```mysql
+CREATE VIEW OrderItemsExpanded AS
+SELECT order_num,
+	   prod_id,
+       quantity,
+       item_price,
+	   quantity*item_price AS expanded_price
+FROM OrderItems;
+```
+
+检索订单20008 的详细内容，如下进行：
+
+```mysql
+SELECT *
+FROM OrderItemsExpanded
+WHERE order_num = 20008;
+```
+
+如果视图定义中有以下操作，则不能进行视图的更新：
+
+- 分组（使用GROUP BY和HAVING）；
+- 联结；
+- 子查询；
+- 并；
+- 聚集函数（Min()、Count()、Sum()等）；
+- DISTINCT；
+- 导出（计算）列。
+
+换句话说，上面许多例子中的视图都是不可更新的。这听上去好像是一个严重的限制，但实际上不是，因为视图主要用于数据检索。需要记住的是，**视图为虚拟的表。它们包含的不是数据而是根据需要检索数据的查询。**视图提供了一种封装SELECT 语句的层次，可用来简化数据处理，重新格式化或保护基础数据。
+
+## 使用存储过程
+
+这一节SQL必知必会中没有适用MySQL的语句，都是其他DBMS的语句。这一节我找到了MySQL必知必会，有相同一节，将以MySQL必知必会的章节来写。
+
+存储过程是为以后的使用而保存的一条或多条MySQL语句的集合。简单来说就是函数，函数的作用不言而喻，适用存储过程的理由如下：
+
+- 通过把处理封装在容易使用的单元中，简化复杂的操作。
+- 由于不要求反复建立一系列处理步骤，这保证了数据的完整性。
+- 简化对变动的管理。如果表名、列名或业务逻辑有变化，只需要更改存储过程的代码。
+- 提高性能。因为使用存储过程比使用单独的SQL语句要快。
+- 存在一些只能用在单个请求中的MySQL元素和特性，存储过程可以使用它们来编写功能更强更灵活的代码。
+
+总的来说，使用存储过程有三个好处，简单、安全、高性能。
+
+将SQL代码转换为存储过程前，也必须知道它的一些缺陷：
+
+- 一般来说，存储过程的编写比基本SQL语句复杂，编写存储过程需要更高的技能，更丰富的经验。
+- 你可能没有创建存储过程的安全访问权限。许多数据库管理员限制存储过程的创建权限，允许用户使用存储过程，但不允许他们创建存储过程。
+
+现在来开始创建存储过程，如下进行：
+
+```mysql
+CREATE PROCEDURE productpricing()
+BEGIN
+	SELECT avg(prod_price) as priceAverage
+    FROM products;
+END;
+```
+
+CREATE PROCEDURE productpricing()语句定义。如果存储过程接受参数，它们将在()中列举出来。BEGIN和END语句用来限定存储过程体，过程体本身仅是一个简单的SELECT语句。跟函数一毛一样。但是上面的存储过程定义会报错，需要改成下面的形式，这是因为mysql命令行实用程序也使用;作为语句分隔符。如果命令行实用程序要解释存储过程自身内的;字符，则它们最终不会成为存储过程的成分，这会使存储过程中的SQL出现句法错误。DELIMITER //告诉命令行实用程序使用//作为新的语句结束分隔符，可以看到标志存储过程结束的END定义为END
+//而不是END;最后，为恢复为原来的语句分隔符，使用DELIMITER ;
+
+```mysql
+DELIMITER //
+
+CREATE PROCEDURE productpricing()
+BEGIN
+	SELECT avg(prod_price) as priceAverage
+    FROM products;
+END //
+
+DELIMITER ;
+```
+
+调用存储过程，使用CALL语句，如下所示：
+
+```mysql
+CALL productpricing();
+```
+
+删除存储过程使用如下命令：
+
+```mysql
+DROP PROCEDURE productpricing;
+```
+
+如果指定的过程不存在，则DROP PROCEDURE将产生一个错误。当过程存在想删除它时（如果过程不存在也
+不产生错误）可使用下面语句。
+
+```mysql
+DROP PROCEDURE IF EXISTS productpricing
+```
+
+productpricing只是一个简单的存储过程，它简单地显示SELECT语句的结果。一般，存储过程并不显示结果，而是把结果返回给你指定的变量。下面是一个更加复杂的productpricing存储过程：
+
+```mysql
+DELIMITER //
+
+CREATE PROCEDURE productpricing(
+	OUT pl DECIMAL(8,2),
+    OUT ph DECIMAL(8,2),
+    OUT pa DECIMAL(8,2)
+)
+BEGIN
+	SELECT min(prod_price)
+    INTO pl
+    FROM products;
+    SELECT max(prod_price)
+    INTO ph
+    FROM products;
+    SELECT avg(prod_price)
+    INTO pa
+    FROM products;
+end //
+
+DELIMITER ;
+```
+
+此存储过程接受3个参数：pl存储产品最低价格，ph存储产品最高价格，pa存储产品平均价格。每个参数必须具有指定的类型，这里使用十进制值。关键字OUT指出相应的参数用来从存储过程传出一个值（返回给调用者）。MySQL支持IN（传递给存储过程）、OUT（从存储过程传出，如这里所用）和INOUT（对存储过程传入和传出类型的参数。
+
+然后我们可以调用这个函数了：
+
+```mysql
+CALL productpricing(@pricelow,
+				    @pricehigh,
+                    @priceaverage);
+```
+
+所有MySQL变量都必须以@开始。在调用时，这条语句并不显示任何数据。它返回以后可以显示的变量。
+
+为了显示检索出的产品平均价格，可如下进行：
+
+```mysql
+SELECT @pricehigh, @pricelow, @priceaverage;
+```
+
+下面是另外一个例子，这次使用IN和OUT参数
+
+```mysql
+DELIMITER //
+
+CREATE PROCEDURE ordertotal(
+	IN onumber INT,
+    OUT ototal DECIMAL(8,2)
+)
+BEGIN
+	SELECT sum(item_price * quantity)
+    FROM orderitems
+    WHERE order_num = onumber
+    INTO ototal;
+END //
+
+DELIMITER ;
+```
+
+调用这个新存储过程：
+
+```mysql
+CALL ordertotal(20005, @total);
+```
+
+显示结果：
+
+```mysql
+SELECT @total;
+```
+
+迄今为止使用的所有存储过程基本上都是封装MySQL简单的SELECT语句。只有在存储过程内包含业务规则和智能处理时，它们的威力才真正显现出来。
+
+考虑这个场景。你需要获得与以前一样的订单合计，但需要对合计增加营业税，不过只针对某些顾客, 那么，你需要做下面几件事情：
+
+- 获得合计（与以前一样）；
+- 把营业税有条件地添加到合计；
+- 返回合计（带或不带税）。
+
+存储过程的完整工作如下：
+
+```mysql
+DELIMITER //
+
+-- Name: ordertotal
+-- Parameters: onumber = order number
+-- 			   taxable = 0 if not taxable, 1 if taxable
+--			   ototal = order total variable
+
+CREATE PROCEDURE ordertotal(
+	IN onumber INT,
+    IN taxable BOOLEAN,
+    OUT ototal DECIMAL(8,2)
+) COMMENT 'Obtain order total, optionally adding tax'
+BEGIN
+
+	-- Declare variable for total
+	DECLARE total DECIMAL(8,2);
+    -- Declare variable oercentage
+    DECLARE taxrate INT DEFAULT 6;
+
+	-- Get the Order total
+    SELECT sum(item_price * quantity)
+    FROM orderitems
+    WHERE order_num = onumber
+    INTO total;
+    
+    -- Is this taxable?
+    IF taxable THEN
+		-- Yes, so add taxrate to the total
+        SELECT total + (total / 100 * taxrate) INTO total;
+	END IF;
+    
+    -- And finally, save to out variable
+    SELECT total INTO ototal;
+
+END //
+
+DELIMITER ;
+```
+
+可以看到比前面复杂许多，在存储过程开始用DECLARE语句定义了两个局部变量，还有条件判断语句。和函数一模一样，定义变量进行赋值，进行条件判断，然后输出。
+
+然后可以使用存储过程了：
+
+```mysql
+CALL ordertotal(20005, 0, @total);
+SELECT @total;
+
+CALL ordertotal(20005, 1, @total);
+SELECT @total;
+```
+
+通过给中间的参数指定0或1，可以有条件地将营业税加到订单合计上。
+
+为显示用来创建一个存储过程的CREATE语句，使用SHOW CREATE PROCEDURE语句：
+
+```mysql
+SHOW CREATE PROCEDURE ordertotal;
+```
+
+为了获得包括何时、由谁创建等详细信息的存储过程列表，使用
+
+```mysql
+SHOW PROCEDURE STATUS;
+```
+
+为限制其输出，可使用LIKE指定一个过滤模式，例如：
+
+```mysql
+SHOW PROCEDURE STATUS LIKE 'ordertotal';
+```
+
+## 使用游标
+
+
 

@@ -537,4 +537,146 @@
 
 -- ALTER TABLE vendors1 RENAME To vendors2;
 
+-- ---------
+-- 使用视图
+-- ---------
 
+-- CREATE VIEW ProductCustomers AS
+-- SELECT cust_name, cust_contact, prod_id
+-- FROM Customers, Orders, OrderItems
+-- WHERE Customers.cust_id = Orders.cust_id
+-- AND OrderItems.order_num = Orders.order_num;
+
+-- SELECT cust_name, cust_contact
+-- FROM ProductCustomers
+-- WHERE prod_id = 'RGAN01';
+
+-- CREATE VIEW VendorLocations AS
+-- SELECT RTRIM(vend_name) + ' (' + RTRIM(vend_country) + ')'
+-- AS vend_title
+-- FROM Vendors;
+
+-- SELECT *
+-- FROM VendorLocations;
+
+-- DROP VIEW VendorLocations; 
+
+-- ------------
+-- 使用存储过程
+-- ------------
+
+-- DELIMITER //
+
+-- CREATE PROCEDURE productpricing()
+-- BEGIN
+-- 	SELECT avg(prod_price) as priceAverage
+--     FROM products;
+-- END //
+
+-- DELIMITER ;
+
+-- CALL productpricing();
+
+-- DROP PROCEDURE productpricing;
+
+-- DROP PROCEDURE IF EXISTS productpricing
+
+-- DELIMITER //
+
+-- CREATE PROCEDURE productpricing(
+-- 	OUT pl DECIMAL(8,2),
+--     OUT ph DECIMAL(8,2),
+--     OUT pa DECIMAL(8,2)
+-- )
+-- BEGIN
+-- 	SELECT min(prod_price)
+--     INTO pl
+--     FROM products;
+--     SELECT max(prod_price)
+--     INTO ph
+--     FROM products;
+--     SELECT avg(prod_price)
+--     INTO pa
+--     FROM products;
+-- end //
+
+-- DELIMITER ;
+
+-- CALL productpricing(@pricelow,
+-- 				    @pricehigh,
+--                     @priceaverage);
+--                     
+-- SELECT @pricehigh, @pricelow, @priceaverage;
+
+-- DELIMITER //
+
+-- CREATE PROCEDURE ordertotal(
+-- 	IN onumber INT,
+--     OUT ototal DECIMAL(8,2)
+-- )
+-- BEGIN
+-- 	SELECT sum(item_price * quantity)
+--     FROM orderitems
+--     WHERE order_num = onumber
+--     INTO ototal;
+-- END //
+
+-- DELIMITER ;
+
+-- CALL ordertotal(20005, @total);
+
+-- SELECT @total;
+
+-- DELIMITER //
+
+-- -- Name: ordertotal
+-- -- Parameters: onumber = order number
+-- -- 			   taxable = 0 if not taxable, 1 if taxable
+-- --			   ototal = order total variable
+
+-- CREATE PROCEDURE ordertotal(
+-- 	IN onumber INT,
+--     IN taxable BOOLEAN,
+--     OUT ototal DECIMAL(8,2)
+-- ) COMMENT 'Obtain order total, optionally adding tax'
+-- BEGIN
+
+-- 	-- Declare variable for total
+-- 	DECLARE total DECIMAL(8,2);
+--     -- Declare variable oercentage
+--     DECLARE taxrate INT DEFAULT 6;
+
+-- 	-- Get the Order total
+--     SELECT sum(item_price * quantity)
+--     FROM orderitems
+--     WHERE order_num = onumber
+--     INTO total;
+--     
+--     -- Is this taxable?
+--     IF taxable THEN
+-- 		-- Yes, so add taxrate to the total
+--         SELECT total + (total / 100 * taxrate) INTO total;
+-- 	END IF;
+--     
+--     -- And finally, save to out variable
+--     SELECT total INTO ototal;
+
+-- END //
+
+-- DELIMITER ;
+
+-- CALL ordertotal(20005, 0, @total);
+-- SELECT @total;
+
+-- CALL ordertotal(20005, 1, @total);
+-- SELECT @total;
+
+-- SHOW CREATE PROCEDURE ordertotal;
+
+-- SHOW PROCEDURE STATUS;
+
+-- SHOW PROCEDURE STATUS LIKE 'ordertotal';
+
+-- ------------
+-- 使用游标
+-- ------------
