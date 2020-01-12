@@ -1,6 +1,6 @@
 # SQL Notes
 
-记录一下学习《SQL必知必会》以及部分《MySQL必知必会》的笔记（从视图一节开始之后的章节都是《MySQL必知必会》）。个人觉得最好从头直接看《MySQL必知必会》，MySQL应用最广泛，《MySQL必知必会》完全针对MySQL，SQL为了考虑各种数据库有些乱，不过游标之前的章节两个差别不大。
+记录一下学习《SQL必知必会》以及部分《MySQL必知必会》的笔记（从视图一节开始之后的章节都是《MySQL必知必会》）。个人觉得最好从头直接看《MySQL必知必会》，MySQL应用最广泛，《MySQL必知必会》完全针对MySQL，SQL为了考虑各种数据库有些乱，不过视图之前的章节两个差别不大。
 
 [TOC]
 
@@ -1273,7 +1273,7 @@ BEGIN
     SELECT total INTO ototal;
 
 END //
-
+ 
 DELIMITER ;
 ```
 
@@ -1311,5 +1311,5 @@ SHOW PROCEDURE STATUS LIKE 'ordertotal';
 
 ## 使用游标
 
-
+一条sql，对应N条资源，取出资源的接口，就是游标，沿着游标，可以一次取出1行。
 

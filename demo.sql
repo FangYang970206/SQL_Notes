@@ -677,6 +677,44 @@
 
 -- SHOW PROCEDURE STATUS LIKE 'ordertotal';
 
--- ------------
+-- ---------
 -- 使用游标
--- ------------
+-- ---------
+
+-- DELIMITER //
+
+-- CREATE PROCEDURE processorders()
+-- BEGIN
+-- 	DECLARE ordernumbers CURSOR
+--     FOR
+--     SELECT order_num FROM orders;
+--     
+--     OPEN ordernumbers;
+--     
+--     CLOSE ordernumbers;
+-- END //
+
+-- DELIMITER ;
+
+-- DELIMITER //
+
+-- CREATE PROCEDURE processorders3()
+-- BEGIN
+-- 	DECLARE o INT;
+
+-- 	DECLARE ordernumbers CURSOR
+--     FOR
+--     SELECT order_num FROM orders;
+--     
+--     OPEN ordernumbers;
+--     
+--     FETCH ordernumbers INTO o;
+--     
+--     SELECT o;
+--     
+--     CLOSE ordernumbers;
+-- END //
+
+-- DELIMITER ;
+
+call processorders3();
