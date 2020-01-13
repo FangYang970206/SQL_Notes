@@ -1311,5 +1311,275 @@ SHOW PROCEDURE STATUS LIKE 'ordertotal';
 
 ## 使用游标
 
-一条sql，对应N条资源，取出资源的接口，就是游标，沿着游标，可以一次取出1行。
+一条sql，对应N条资源，取出资源的接口，就是游标，沿着游标，可以一次取出1行。游标几乎与迭代器功能一样。在存储了游标之后，应用程序可以根据需要滚动或浏览其中的数据。游标主要用于交互式应用，其中用户需要滚动屏幕上的数据，并对数据进行浏览或做出更改。
+
+> MySQL游标只能用于存储过程（和函数）。
+
+**使用游标的步骤**：
+
+1. 使用declare进行声明
+
+```mysql
+declare 游标名 cursor for select_statement
+```
+
+2. 打开游标
+
+```mysql
+open 游标名
+```
+
+3. 从游标中取值
+
+```mysql
+fetch 游标名 into var1,var2[,...] --将取到的一行赋值给多个变量
+```
+
+4. 关闭游标
+
+```mysql
+close 游标名
+```
+
+下面介绍几个例子，第一个例子从游标中检索单个行（第一行）：
+
+```mysql
+DELIMITER //
+
+CREATE PROCEDURE processorders()
+BEGIN
+	DECLARE o INT;
+
+	DECLARE ordernumbers CURSOR
+    FOR
+    SELECT order_num FROM orders;
+    
+    OPEN ordernumbers;
+    
+    FETCH ordernumbers INTO o;
+    
+    SELECT o;
+    
+    CLOSE ordernumbers;
+END //
+
+DELIMITER ;
+```
+
+其中FETCH用来检索当前行的order_num列（将自动从第一行开始）到一个名为o的局部声明的变量中。对检索出的数据不做任何处理。
+
+调用processorders存储过程, 得到第一行：
+
+```mysql
+CALL processorders();
+```
+
+下一个例子中，循环检索数据，从第一行到最后一行：
+
+```mysql
+DELIMITER //
+
+CREATE PROCEDURE processorders1()
+BEGIN
+	DECLARE done BOOLEAN DEFAULT 0;
+    DECLARE o INT;
+    
+    DECLARE ordernumbers CURSOR
+    FOR
+    SELECT order_num FROM orders;
+    
+    DECLARE CONTINUE HANDLER FOR SQLSTATE '02000' SET done = 1;
+    
+    OPEN ordernumbers;
+    
+    REPEAT
+		FETCH ordernumbers INTO o;
+	UNTIL done END REPEAT;
+    
+    CLOSE ordernumbers;
+END //
+
+DELIMITER ;
+```
+
+与前一个例子一样，这个例子使用FETCH检索当前order_num到声明的名为o的变量中。但与前一个例子不一样的是，这个例子中的FETCH是在REPEAT内，因此它反复执行直到done为真（由UNTIL done END REPEAT;规定）。为使它起作用，用一个DEFAULT 0（假，不结束）定义变量done。那么，done怎样才能在结束时被设置为真呢？答案是用以下语句：
+
+```mysql
+DECLARE CONTINUE HANDLER FOR SQLSTATE '02000' SET done = 1;
+```
+
+这条语句定义了一个CONTINUE HANDLER，它是在条件出现时被执行的代码。这里，它指出当SQLSTATE '02000'出现时，SET done=1。SQLSTATE '02000'是一个未找到条件，当REPEAT由于没有更多的行供循环而不能继续时，出现这个条件。
+
+> **DECLARE语句的次序** 
+>
+> DECLARE语句存在特定的次序。用DECLARE语句定义的局部变量必须在定义任意游标或句柄之前定义，而句柄必须在游标之后定义。不遵守此顺序将产生错误消息。
+
+可以在循环内放入任意需要的处理，我得到了存储过程、游标、逐行处理以及存储过程调用其他存储过程的一个完整的工作样例。
+
+```mysql
+DELIMITER //
+
+CREATE PROCEDURE processorders2()
+BEGIN
+	DECLARE done BOOLEAN DEFAULT 0;
+    DECLARE o INT;
+    DECLARE t DECIMAL(8,2);
+    
+    DECLARE ordernumbers CURSOR
+    FOR
+    SELECT order_num FROM orders;
+    
+    DECLARE CONTINUE HANDLER FOR SQLSTATE '02000' SET done = 1;
+    
+    CREATE TABLE IF NOT EXISTS ordertotals
+		(order_num INT, total DECIMAL(8,2));
+    
+    OPEN ordernumbers;
+    
+    REPEAT
+		FETCH ordernumbers INTO o;
+        CALL ordertotal(o, 1, t);
+        INSERT INTO ordertotals(order_num, total) VALUES(o, t);
+	UNTIL done END REPEAT;
+    
+    CLOSE ordernumbers;
+END //
+
+DELIMITER ;
+```
+
+在这个例子中，我们增加了另一个名为t的变量（存储每个订单的合计）。此存储过程还在运行中创建了一个新表，名为ordertotals。这个表将保存存储过程生成的结果。FETCH像以前一样取每个order_num，然后用CALL执行另一个存储过程（我们在前一章中创建）来计算每个订单的带税的合计（结果存储到t）。最后，用INSERT保存每个订单的订单号和合计。
+
+此存储过程不返回数据，但它能够创建和填充另一个表，可以用一条简单的SELECT语句查看该表：
+
+```mysql
+SELECT * FROM ordertotals;
+```
+
+## 触发器
+
+MySQL语句在需要时被执行，存储过程也是如此。但是，如果你想要某条语句（或某些语句）在事件发生时自动执行，怎么办呢？例如：
+
+- 每当增加一个顾客到某个数据库表时，都检查其电话号码格式是否正确，州的缩写是否为大写；
+
+这时候需要在某个表发生更改时自动处理。这时候就需要用到触发器。触发器用在某条语句在事件发生时自动执行。触发器是MySQL只响应以下任意语句而自动执行的一条MySQL语句。
+
+- DELETE；
+- INSERT；
+- UPDATE。
+
+创建触发器需要给出四条信息：
+
+- 唯一的触发器名；
+- 触发器关联的表；
+- 触发器应该响应的活动（DELETE、INSERT或UPDATE）；
+- 触发器何时执行（处理之前或之后）。
+
+触发器用CREATE TRIGGER语句创建。下面是一个简单的例子：
+
+```mysql
+CREATE TRIGGER newproduct AFTER INSERT ON products
+FOR EACH ROW SELECT 'Product added' INTO @ee; -- 不允许直接返回结果集，需要加上INTO @ee
+```
+
+CREATE TRIGGER用来创建名为newproduct的新触发器。触发器可在一个操作发生之前或之后执行，这里给出了AFTER INSERT，所以此触发器将在INSERT语句成功执行后执行。这个触发器还指定FOR EACH ROW，因此代码对每个插入行执行。在这个例子中，文本Product added将对每个插入的行显示一次。
+
+通过下面语句显示结果：
+
+```mysql
+INSERT INTO products(prod_id,
+					 vend_id,
+                     prod_name,
+                     prod_price,
+                     prod_desc)
+			VALUES('BNG011',
+				   'DLL01',
+                   'happy',
+                   3.99,
+                   'happy birthday');
+
+SELECT @ee;
+```
+
+只有表才支持触发器。触发器按每个表每个事件每次地定义，每个表每个事件每次只允许一个触发器。因此，每个表最多支持6个触发器（每条INSERT、UPDATE和DELETE的之前和之后）。单一触发器不能与多个事件或多个表关联，所以，如果你需要一个对INSERT和UPDATE操作执行的触发器，则应该定义两个触发器。
+
+删除触发器使用DROP TRIGGER语句，如下所示：
+
+```mysql
+DROP TRIGGER newproduct;
+```
+
+触发器不能更新或覆盖。为了修改一个触发器，必须先删除它，然后再重新创建。
+
+触发器有三种类型：
+
+- INSERT触发器
+- DELETE触发器
+- UPDATE触发器。
+
+INSERT触发器在INSERT语句执行之前或之后执行。需要知道以下几点：
+
+- 在INSERT触发器代码内，可引用一个名为NEW的虚拟表，访问被插入的行；
+- 在BEFORE INSERT触发器中，NEW中的值也可以被更新（允许更改被插入的值）；
+- 对于AUTO_INCREMENT列，NEW在INSERT执行之前包含0，在INSERT执行之后包含新的自动生成值。
+
+下面是INSERT触发器的例子：
+
+```mysql
+CREATE TRIGGER neworder AFTER INSERT ON orders
+FOR EACH ROW SELECT NEW.order_num INTO @ee1;
+
+INSERT INTO orders(order_num, order_date, cust_id)
+VALUES(20002, now(), 1000000001);
+
+SELECT @ee1;
+```
+
+此代码创建一个名为neworder的触发器，它按照AFTER INSERT ON orders执行。在插入一个新订单到orders表时，MySQL生成一个新订单号并保存到order_num中。触发器从NEW.order_num取得这个值并返回它。此触发器必须按照AFTER INSERT执行，因为在BEFORE INSERT语句执行之前，新order_num还没有生成。对于orders的每次插入使用这个触发器将总是返回新的订单号。
+
+>  BEFORE还是AFTER，通常BEFORE用于数据验证和净化（目的是保证插入表中的数据确实是需要的数据）。
+
+DELETE触发器在DELETE语句执行之前或之后执行。需要知道以下两点：
+
+- 在DELETE触发器代码内，你可以引用一个名为OLD的虚拟表，访问被删除的行；
+- OLD中的值全都是只读的，不能更新。
+
+下面的例子演示使用OLD保存将要被删除的行到一个存档表中：
+
+```mysql
+DELIMITER //
+
+CREATE TRIGGER deleteorder BEFORE DELETE ON orders
+FOR EACH ROW
+BEGIN
+	INSERT INTO archive_orders(order_num, order_date, cust_id)
+    VALUES(OLD.order_num, OLD.order_date, OLD.cust_id);
+END //
+
+DELIMITER ;
+```
+
+在任意订单被删除前将执行此触发器。它使用一条INSERT语句将OLD中的值（要被删除的订单）保存到一个名为archive_orders的存档表中。
+
+UPDATE触发器在UPDATE语句执行之前或之后执行。需要知道以下几点：
+
+- 在UPDATE触发器代码中，你可以引用一个名为OLD的虚拟表访问以前（UPDATE语句前）的值，引用一个名为NEW的虚拟表访问新更新的值；
+- 在BEFORE UPDATE触发器中，NEW中的值可能也被更新（允许更改将要用于UPDATE语句中的值）；
+- OLD中的值全都是只读的，不能更新。
+
+下面的例子保证州名缩写总是大写：
+
+```mysql
+CREATE TRIGGER updatevendor BEFORE UPDATE ON vendors
+FOR EACH ROW SET NEW.vend_state = upper(NEW.vend_state);
+```
+
+触发器的进一步介绍:
+
+- 创建触发器可能需要特殊的安全访问权限，但是，触发器的执行是自动的。如果INSERT、UPDATE或DELETE语句能够执行，则相关的触发器也能执行。
+- 应该用触发器来保证数据的一致性（大小写、格式等）。在触发器中执行这种类型的处理的优点是它总是进行这种处理，而且是透明地进行，与客户机应用无关。
+- 触发器的一种非常有意义的使用是创建审计跟踪。使用触发器，把更改记录到另一个表非常容易。
+- MySQL触发器中不支持CALL语句。这表示不能从触发器内调用存储过程。所需的存储过程代码需要复制到触发器内。
+
+## 管理事务处理
 

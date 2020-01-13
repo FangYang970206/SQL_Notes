@@ -698,7 +698,7 @@
 
 -- DELIMITER //
 
--- CREATE PROCEDURE processorders3()
+-- CREATE PROCEDURE processorders()
 -- BEGIN
 -- 	DECLARE o INT;
 
@@ -717,4 +717,113 @@
 
 -- DELIMITER ;
 
-call processorders3();
+-- CALL processorders();]
+
+-- DELIMITER //
+
+-- CREATE PROCEDURE processorders1()
+-- BEGIN
+-- 	DECLARE done BOOLEAN DEFAULT 0;
+--     DECLARE o INT;
+--     
+--     DECLARE ordernumbers CURSOR
+--     FOR
+--     SELECT order_num FROM orders;
+--     
+--     DECLARE CONTINUE HANDLER FOR SQLSTATE '02000' SET done = 1;
+--     
+--     OPEN ordernumbers;
+--     
+--     REPEAT
+-- 		FETCH ordernumbers INTO o;
+-- 	UNTIL done END REPEAT;
+--     
+--     CLOSE ordernumbers;
+-- END //
+
+-- DELIMITER ;
+
+-- CALL processorders1();
+
+-- DELIMITER //
+
+-- CREATE PROCEDURE processorders2()
+-- BEGIN
+-- 	DECLARE done BOOLEAN DEFAULT 0;
+--     DECLARE o INT;
+--     DECLARE t DECIMAL(8,2);
+--     
+--     DECLARE ordernumbers CURSOR
+--     FOR
+--     SELECT order_num FROM orders;
+--     
+--     DECLARE CONTINUE HANDLER FOR SQLSTATE '02000' SET done = 1;
+--     
+--     CREATE TABLE IF NOT EXISTS ordertotals
+-- 		(order_num INT, total DECIMAL(8,2));
+--     
+--     OPEN ordernumbers;
+--     
+--     REPEAT
+-- 		FETCH ordernumbers INTO o;
+--         CALL ordertotal(o, 1, t);
+--         INSERT INTO ordertotals(order_num, total) VALUES(o, t);
+-- 	UNTIL done END REPEAT;
+--     
+--     CLOSE ordernumbers;
+-- END //
+
+-- DELIMITER ;
+
+-- CALL processorders2(); 
+
+-- SELECT * FROM ordertotals;
+
+-- ----------
+-- 使用触发器
+-- ----------
+
+-- CREATE TRIGGER newproduct AFTER INSERT ON products
+-- FOR EACH ROW SELECT 'Product added' INTO @ee;
+
+-- INSERT INTO products(prod_id,
+-- 					 vend_id,
+--                      prod_name,
+--                      prod_price,
+--                      prod_desc)
+-- 			VALUES('BNG011',
+-- 				   'DLL01',
+--                    'happy',
+--                    3.99,
+--                    'happy birthday');
+
+-- SELECT @ee;
+
+-- DROP TRIGGER newproduct;
+
+-- CREATE TRIGGER neworder AFTER INSERT ON orders
+-- FOR EACH ROW SELECT NEW.order_num INTO @ee1;
+
+-- INSERT INTO orders(order_num, order_date, cust_id)
+-- VALUES(20002, now(), 1000000001);
+
+-- SELECT @ee1;
+
+-- DELIMITER //
+
+-- CREATE TRIGGER deleteorder BEFORE DELETE ON orders
+-- FOR EACH ROW
+-- BEGIN
+-- 	INSERT INTO archive_orders(order_num, order_date, cust_id)
+--     VALUES(OLD.order_num, OLD.order_date, OLD.cust_id);
+-- END //
+
+-- DELIMITER ;
+
+-- CREATE TRIGGER updatevendor BEFORE UPDATE ON vendors
+-- FOR EACH ROW SET NEW.vend_state = upper(NEW.vend_state);
+
+-- ------------
+-- 管理事务处理
+-- ------------
+
